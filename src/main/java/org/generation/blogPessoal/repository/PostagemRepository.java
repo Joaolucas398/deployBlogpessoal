@@ -8,8 +8,6 @@ import org.springframework.stereotype.Repository;
 
 
 @Repository
-public interface PostagemRepository extends JpaRepository<Postagem, Long> {
-	
-	public List<Postagem> findAllByTituloContainingIgnoreCase (String titulo);
-
+public interface Postagemrepository extends JpaRepository<Postagem, Long>{
+	List<Postagem> findByTituloContainingIgnoreCase(String titulo);
 }

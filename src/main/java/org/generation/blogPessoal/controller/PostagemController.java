@@ -1,9 +1,12 @@
 package org.generation.blogPessoal.controller;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 import java.util.List;
 
 import org.generation.blogPessoal.model.Postagem;
-import org.generation.blogPessoal.repository.PostagemRepository;
+import org.generation.blogPessoal.repository.Postagemrepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,43 +22,67 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/postagens")
-@CrossOrigin("*")
+@CrossOrigin(origins="*", allowedHeaders="*")
 public class PostagemController {
 
-	@Autowired // Faz a instanciação que desejarmos, basicamente não precisamos de ficar
-				// instanciando toda hora e ele faz isso por nós.
-	private PostagemRepository repository;
-
+	@Autowired
+	private Postagemrepository postagemRepository;
+	
 	@GetMapping
-	public ResponseEntity<List<Postagem>> GetAll() {
-		return ResponseEntity.ok(repository.findAll());
+	public ResponseEntity<List<Postagem>> getAll(){
+		List<Postagem> postagens = postagemRepository.findAll();
+		
+		if(postagens.isEmpty()) {
+			return ResponseEntity.ok(postagens);
+		}else {
+			for(Postagem post:postagens) {
+				Long id = post.getId();
+				post.add(linkTo(methodOn(PostagemController.class).getById(id)).withSelfRel());
+			}
+			return ResponseEntity.ok(postagens);
+		}
 	}
-
+	
 	@GetMapping("/{id}")
-	public ResponseEntity<Postagem> GetById(@PathVariable Long id) {
-		return repository.findById(id).map(resposta -> ResponseEntity.ok(resposta))
-				.orElse(ResponseEntity.notFound().build());
+	public ResponseEntity<Postagem> getById(@PathVariable Long id){
+		return postagemRepository.findById(id).map(post->{
+			post.add(linkTo(methodOn(PostagemController.class).getAll()).withRel("Lista postagens").withType("GET"));//adiciona link do getAll()
+			return ResponseEntity.ok(post);
+		}).orElse(ResponseEntity.notFound().build());
 	}
 	
 	@GetMapping("/titulo/{titulo}")
-	public ResponseEntity<List<Postagem>> GetByTittle(@PathVariable String titulo) {
-		return ResponseEntity.ok(repository.findAllByTituloContainingIgnoreCase(titulo));
+	public ResponseEntity<List<Postagem>> getByTitulo(@PathVariable String titulo){
+		List<Postagem> postagens = postagemRepository.findByTituloContainingIgnoreCase(titulo);
+		if(postagens.isEmpty()) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+		}else {
+			for(Postagem post:postagens) {
+				Long id = post.getId();
+				post.add(linkTo(methodOn(PostagemController.class).getAll()).withRel("todas as postagens"));
+				post.add(linkTo(methodOn(PostagemController.class).getById(id)).withSelfRel());
+			}
+			return ResponseEntity.ok(postagens);
+		}
 	}
-
+	
 	@PostMapping
-	public ResponseEntity<Postagem> AddPost(@RequestBody Postagem postagem) {
-		return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(postagem));
+	public ResponseEntity<Postagem> post (@RequestBody Postagem postagem){
+		return ResponseEntity.status(HttpStatus.CREATED).body(postagemRepository.save(postagem));
 	}
 	
-	@PutMapping
-	public ResponseEntity<Postagem> Put(@RequestBody Postagem postagem) {
-		return ResponseEntity.status(HttpStatus.OK).body(repository.save(postagem));
+	@PutMapping("/{id}")
+	public ResponseEntity<Postagem> put (@RequestBody Postagem postagem, @PathVariable Long id ){
+		return postagemRepository.findById(id).map(post->{
+		post.setTitulo(postagem.getTitulo());
+		post.setTexto(postagem.getTexto());
+		post.setData(postagem.getData());
+		return ResponseEntity.status(HttpStatus.OK).body(postagemRepository.save(post));
+		}).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
 	}
 	
-	@DeleteMapping("/{id}") 
-	public void delete(@PathVariable long id) {
-		repository.deleteById(id);
+	@DeleteMapping("/{id}")
+	public void delete(@PathVariable Long id) {
+		postagemRepository.deleteById(id);
 	}
-//
-
 }

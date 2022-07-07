@@ -14,8 +14,8 @@ import io.swagger.v3.oas.models.responses.ApiResponses;
 
 @Configuration
 public class SwaggerConfig {
-
-	@Bean
+  
+  @Bean
 	public OpenAPI springBlogPessoalOpenAPI() {
 		return new OpenAPI()
 				.info(new Info()
@@ -32,9 +32,8 @@ public class SwaggerConfig {
 				.externalDocs(new ExternalDocumentation()
 					.description("Github")
 					.url("https://github.com/Joaolucas398/"));
-	}
-
-	@Bean
+    }
+    @Bean
 	public OpenApiCustomiser customerGlobalHeaderOpenApiCustomiser() {
 
 		return openApi -> {
@@ -53,10 +52,9 @@ public class SwaggerConfig {
 			}));
 		};
 	}
-	
-	private ApiResponse createApiResponse(String message) {
+  
+  private ApiResponse createApiResponse(String message) { //Método 'create' add uma msg em caa resposta Http!
+        return new ApiResponse().description(message);
+    }
 
-		return new ApiResponse().description(message);
-
-	}
 }

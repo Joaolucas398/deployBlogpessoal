@@ -1,5 +1,8 @@
 package org.generation.blogPessoal.controller;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 import java.util.List;
 
 import javax.validation.Valid;
@@ -20,43 +23,77 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@CrossOrigin(origins = "*", allowedHeaders = "*")
-@RequestMapping("/tema")
+@CrossOrigin(origins="*",allowedHeaders="*")
+@RequestMapping("/temas")
 public class TemaController {
 	
 	@Autowired
 	private TemaRepository repository;
 	
 	@GetMapping
-	public ResponseEntity<List<Tema>> getAll() {
-		return ResponseEntity.ok(repository.findAll());
+	public ResponseEntity<List<Tema>> getAll(){
+		List<Tema> temas = repository.findAll();
+		if(temas.isEmpty()) {
+			return ResponseEntity.ok(temas);
+		}
+		else {
+			for(Tema tema:temas) {
+				long id = tema.getId();
+				tema.add(linkTo(methodOn(TemaController.class).getById(id)).withSelfRel().withType("GET"));
+			}
+			return ResponseEntity.ok(temas);
+		}
 	}
 	
 	@GetMapping("/{id}")
-	public ResponseEntity<Tema> getById(@PathVariable long id) {
-		return repository.findById(id).map(resp -> ResponseEntity.ok(resp))
-				.orElse(ResponseEntity.notFound().build());
+	public ResponseEntity<Tema> getById(@PathVariable Long id) {
+		return repository.findById(id).map(tema->{
+			tema.add(linkTo(methodOn(TemaController.class).getAll()).withRel("All").withType("GET"));
+			return ResponseEntity.ok(tema);
+		}).orElse(ResponseEntity.notFound().build());
+		
+		/*Optional<Tema> tema = repository.findById(id);
+		if(!tema.isPresent()) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+		}else {
+			tema.get().add(linkTo(methodOn(TemaController.class).getAll()).withRel("All").withType("GET"));
+			return ResponseEntity.ok(tema.get());
+		}*/
 	}
 	
-	@GetMapping("/nome/{nome}")
-	public ResponseEntity<List<Tema>> getByName(@PathVariable String nome) {
-		return ResponseEntity.ok(repository.findAllByDescricaoContainingIgnoreCase(nome));
+	@GetMapping("/nome/{descricao}")
+	public ResponseEntity<List<Tema>> getByDescricao(@PathVariable String descricao){
+		List<Tema> temas = repository.findAllByDescricaoContainingIgnoreCase(descricao);
+		if(temas.isEmpty()) {
+			return ResponseEntity.notFound().build();
+		}else {
+			for (Tema tema:temas) {
+				Long id = tema.getId();
+				tema.add(linkTo(methodOn(TemaController.class).getAll()).withRel("All").withType("GET"));
+				tema.add(linkTo(methodOn(TemaController.class).getById(id)).withSelfRel());
+			}
+			
+			return ResponseEntity.ok(temas);
+		}
 	}
 	
 	@PostMapping
-	public ResponseEntity<Tema> post (@Valid @RequestBody Tema tema) {
-		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(repository.save(tema));
+	public ResponseEntity<Tema> post(@Valid @RequestBody Tema tema){
+		return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(tema));
 	}
 	
-	@PutMapping
-	public ResponseEntity<Tema> put (@Valid @RequestBody Tema tema) {
-		return ResponseEntity.ok(repository.save(tema));
+	@PutMapping("/{id}")
+	public ResponseEntity<Tema> put ( @Valid @RequestBody Tema tema, @PathVariable Long id){
+		return repository.findById(id).map(temaAntigo->{
+			temaAntigo.setDescricao(tema.getDescricao());
+			return ResponseEntity.ok().body(repository.save(temaAntigo));
+		}).orElse(ResponseEntity.notFound().build());
 	}
 	
 	@DeleteMapping("/{id}")
-	public void delete(@PathVariable long id) {
+	public void delete(@PathVariable Long id) {
 		repository.deleteById(id);
 	}
-
+	
+	
 }
