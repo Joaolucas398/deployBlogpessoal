@@ -30,7 +30,9 @@ import org.springframework.http.ResponseEntity;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class UsuarioControllerTest {
 
-	// Adição injeção de dependência
+	/**
+	 * Injeta um objeto da Classe TestRestTemplate, responsável por fazer requisições HTTP (semelhante ao Postman)
+	 */
 	@Autowired
 	private TestRestTemplate testRestTemplate;
 
@@ -41,147 +43,278 @@ public class UsuarioControllerTest {
 	private UsuarioRepository usuarioRepository;
 
 	@BeforeAll
-	void start() {
-		// Limpando o banco de dados antes de começar
+	void start(){
+
+		/**
+		 * Apaga todos os registros do banco de dados antes de iniciar os testes
+		 */
+
 		usuarioRepository.deleteAll();
+
 	}
 
-	// Teste 01
 	@Test
 	@Order(1)
 	@DisplayName("Cadastrar Um Usuário")
 	public void deveCriarUmUsuario() {
 
-		// Passando dados do usuário que vai ser cadastrado
-		HttpEntity<Usuario> corpoRequisicao = new HttpEntity<Usuario>(new Usuario(0L, "Paulo Antunes",
-				"paulo_antunes@email.com.br", "13465278", "https://i.imgur.com/JR7kUFU.jpg"));
+		/**
+		 * Cria um objeto da Classe Usuario e insere dentro de um Objeto da Classe HttpEntity (Entidade HTTP)
+		 */
+		HttpEntity<Usuario> corpoRequisicao = new HttpEntity<Usuario>(new Usuario(0L, 
+			"Paulo Antunes", "paulo_antunes@email.com.br", "13465278", "https://i.imgur.com/JR7kUFU.jpg"));
 
-		// Cadastrando o usuário
-		ResponseEntity<Usuario> corpoResposta = testRestTemplate.exchange("/usuarios/cadastrar", HttpMethod.POST,
-				corpoRequisicao, Usuario.class);
+		/**
+		 * Cria um Objeto da Classe ResponseEntity (corpoResposta), que receberá a Resposta da Requisição que será 
+		 * enviada pelo Objeto da Classe TestRestTemplate.
+		 * 
+		 * Na requisição HTTP será enviada a URL do recurso (/usuarios/cadastrar), o verbo (POST), a entidade
+		 * HTTP criada acima (corpoRequisicao) e a Classe de retornos da Resposta (Usuario).
+		 */
+		ResponseEntity<Usuario> corpoResposta = testRestTemplate
+			.exchange("/usuarios/cadastrar", HttpMethod.POST, corpoRequisicao, Usuario.class);
 
-		// Verificando se o usuário foi criado
+		/**
+		 * Verifica se a requisição retornou o Status Code CREATED (201) 
+		 * Se for verdadeira, o teste passa, se não, o teste falha.
+		 */
 		assertEquals(HttpStatus.CREATED, corpoResposta.getStatusCode());
 
-		// Verificando se o nome e usuário do corpo da requisição é igual ao do corpo da
-		// resposta
+		/**
+		 * Verifica se o Atributo Nome do Objeto da Classe Usuario retornado no Corpo da Requisição 
+		 * é igual ao Atributo Nome do Objeto da Classe Usuario Retornado no Corpo da Resposta
+		 * Se for verdadeiro, o teste passa, senão o teste falha.
+		 */
 		assertEquals(corpoRequisicao.getBody().getNome(), corpoResposta.getBody().getNome());
+
+		/**
+		 * Verifica se o Atributo Usuario do Objeto da Classe Usuario retornado no Corpo da Requisição 
+		 * é igual ao Atributo Usuario do Objeto da Classe Usuario Retornado no Corpo da Resposta
+		 * Se for verdadeiro, o teste passa, senão o teste falha.
+		 */
 		assertEquals(corpoRequisicao.getBody().getUsuario(), corpoResposta.getBody().getUsuario());
 	}
 
-	// Teste02
 	@Test
 	@Order(2)
 	@DisplayName("Não deve permitir duplicação do Usuário")
 	public void naoDeveDuplicarUsuario() {
 
-		// Cadastrando um usuário
-		usuarioService.cadastrarUsuario(new Usuario(0L, "Maria da Silva", "maria_silva@email.com.br", "13465278",
-				"https://i.imgur.com/T12NIp9.jpg"));
+		/**
+		 * Persiste um objeto da Classe Usuario no Banco de dados através do Objeto da Classe UsuarioService
+		 */
+		usuarioService.cadastrarUsuario(new Usuario(0L, 
+			"Maria da Silva", "maria_silva@email.com.br", "13465278", "https://i.imgur.com/T12NIp9.jpg"));
 
-		// passando usuário duplicado para o corpo da requisição
-		HttpEntity<Usuario> corpoRequisicao = new HttpEntity<Usuario>(new Usuario(0L, "Maria da Silva",
-				"maria_silva@email.com.br", "13465278", "https://i.imgur.com/T12NIp9.jpg"));
+		/**
+		 * Cria o mesmo objeto da Classe Usuario que foi persistido no Banco de dados na linha anterior para
+		 * simular uma duplicação de usuário e insere dentro de um Objeto da Classe HttpEntity (Entidade HTTP)
+		 */
+		HttpEntity<Usuario> corpoRequisicao = new HttpEntity<Usuario>(new Usuario(0L, 
+			"Maria da Silva", "maria_silva@email.com.br", "13465278", "https://i.imgur.com/T12NIp9.jpg"));
 
-		// Tentando cadastrar usuário já cadastrado
-		ResponseEntity<Usuario> corpoResposta = testRestTemplate.exchange("/usuarios/cadastrar", HttpMethod.POST,
-				corpoRequisicao, Usuario.class);
+		/**
+		 * Cria um Objeto da Classe ResponseEntity (corpoResposta), que receberá a Resposta da Requisição que será 
+		 * enviada pelo Objeto da Classe TestRestTemplate.
+		 * 
+		 * Na requisição HTTP será enviada a URL do recurso (/usuarios/cadastrar), o verbo (POST), a entidade
+		 * HTTP criada acima (corpoRequisicao) e a Classe de retornos da Resposta (Usuario).
+		 */
+		ResponseEntity<Usuario> corpoResposta = testRestTemplate
+			.exchange("/usuarios/cadastrar", HttpMethod.POST, corpoRequisicao, Usuario.class);
 
-		// Testando se o banco de dados está retornando um status de erro e retornando
-		// um status ok caso esteja
+		/**
+		 * Verifica se a requisição retornou o Status Code BAD_REQUEST (400), que indica que o usuário já existe no
+		 * Banco de dados. 
+		 * Se for verdadeira, o teste passa, senão o teste falha.
+		 */
 		assertEquals(HttpStatus.BAD_REQUEST, corpoResposta.getStatusCode());
 	}
 
-	// Teste 03
 	@Test
 	@Order(3)
 	@DisplayName("Atualizar um Usuário")
 	public void deveAtualizarUmUsuario() {
 
-		// Cadastrando usuário
-		Optional<Usuario> usuarioCadastrado = usuarioService.cadastrarUsuario(new Usuario(0L, "Juliana Andrews",
-				"juliana_andrews@email.com.br", "juliana123", "https://i.imgur.com/yDRVeK7.jpg"));
-
-		// Pegando Id do usuário cadastrado e atualizando os dados
-		Usuario usuarioUpdate = new Usuario(usuarioCadastrado.get().getId(), "Juliana Andrews Ramos",
-				"juliana_ramos@email.com.br", "juliana123", "https://i.imgur.com/yDRVeK7.jpg");
-
-		// Inserindo o usuáio atualizado dentro da classe HttpEntity
+		/**
+		 * Persiste um objeto da Classe Usuario no Banco de dados através do Objeto da Classe UsuarioService e
+		 * guarda o objeto persistido no Banco de Dadoas no Objeto usuarioCadastrado, que será reutilizado abaixo. 
+		 * 
+		 * O Objeto usuarioCadastrado será do tipo Optional porquê caso o usuário não seja persistido no Banco 
+		 * de dados, o Optional evitará o erro NullPointerException (Objeto Nulo).
+		 */
+		Optional<Usuario> usuarioCadastrado = usuarioService.cadastrarUsuario(new Usuario(0L, 
+			"Juliana Andrews", "juliana_andrews@email.com.br", "juliana123", "https://i.imgur.com/yDRVeK7.jpg"));
+		/**
+		 *  Cria um Objeto da Classe Usuário contendo os dados do Objeto usuarioCadastrado, que foi persistido na
+		 *  linha anterior, alterando os Atributos Nome e Usuário (Atualização dos Atributos). 
+		 *  
+		 * Observe que para obter o Id de forma automática, foi utilizado o método getId() do Objeto usuarioCadastrado.
+		 */
+		Usuario usuarioUpdate = new Usuario(usuarioCadastrado.get().getId(), 
+			"Juliana Andrews Ramos", "juliana_ramos@email.com.br", "juliana123" , "https://i.imgur.com/yDRVeK7.jpg");
+		
+		/**
+		 * Insere o objeto da Classe Usuario (usuarioUpdate) dentro de um Objeto da Classe HttpEntity (Entidade HTTP)
+		 */
 		HttpEntity<Usuario> corpoRequisicao = new HttpEntity<Usuario>(usuarioUpdate);
 
-		// Utilizando método put para atualizar os dados
-		ResponseEntity<Usuario> corpoResposta = testRestTemplate.withBasicAuth("root", "root")
-				.exchange("/usuarios/atualizar", HttpMethod.PUT, corpoRequisicao, Usuario.class);
+		/**
+		 * Cria um Objeto da Classe ResponseEntity (corpoResposta), que receberá a Resposta da Requisição que será 
+		 * enviada pelo Objeto da Classe TestRestTemplate.
+		 * 
+		 * Na requisição HTTP será enviada a URL do recurso (/usuarios/atualizar), o verbo (PUT), a entidade
+		 * HTTP criada acima (corpoRequisicao) e a Classe de retornos da Resposta (Usuario).
+		 * 
+		 * Observe que o Método Atualizar não está liberado de autenticação (Login do usuário), por isso utilizamos o
+		 * Método withBasicAuth para autenticar o usuário em memória, criado na BasicSecurityConfig.
+		 * 
+		 * Usuário: root
+		 * Senha: root
+		 */
+		ResponseEntity<Usuario> corpoResposta = testRestTemplate
+			.withBasicAuth("root", "root")
+			.exchange("/usuarios/atualizar", HttpMethod.PUT, corpoRequisicao, Usuario.class);
 
-		// Verificando se a atualização funcionou e retornando um status
+		/**
+		 *  Verifica se a requisição retornou o Status Code OK (200) 
+		 * Se for verdadeira, o teste passa, se não, o teste falha.
+		 */
 		assertEquals(HttpStatus.OK, corpoResposta.getStatusCode());
 
-		// Verificando se o nome e usuário do corpo da requisição é igual ao do corpo da
-		// resposta
+		/**
+		 * Verifica se o Atributo Nome do Objeto da Classe Usuario retornado no Corpo da Requisição 
+		 * é igual ao Atributo Nome do Objeto da Classe Usuario Retornado no Corpo da Resposta
+		 * Se for verdadeiro, o teste passa, senão o teste falha.
+		 */
 		assertEquals(corpoRequisicao.getBody().getNome(), corpoResposta.getBody().getNome());
+
+		/**
+		 * Verifica se o Atributo Usuario do Objeto da Classe Usuario retornado no Corpo da Requisição 
+		 * é igual ao Atributo Usuario do Objeto da Classe Usuario Retornado no Corpo da Resposta
+		 * Se for verdadeiro, o teste passa, senão o teste falha.
+		 */
 		assertEquals(corpoRequisicao.getBody().getUsuario(), corpoResposta.getBody().getUsuario());
 	}
 
-	// Teste 04
 	@Test
 	@Order(4)
 	@DisplayName("Listar todos os Usuários")
 	public void deveMostrarTodosUsuarios() {
 
-		// Cadastrando dois usuários
-		usuarioService.cadastrarUsuario(new Usuario(0L, "Sabrina Sanches", "sabrina_sanches@email.com.br", "sabrina123",
-				"https://i.imgur.com/5M2p5Wb.jpg"));
+		/**
+		 * Persiste dois objetos diferentes da Classe Usuario no Banco de dados através do Objeto da Classe UsuarioService
+		 */
+		usuarioService.cadastrarUsuario(new Usuario(0L, 
+			"Sabrina Sanches", "sabrina_sanches@email.com.br", "sabrina123", "https://i.imgur.com/5M2p5Wb.jpg"));
+		
+		usuarioService.cadastrarUsuario(new Usuario(0L, 
+			"Ricardo Marques", "ricardo_marques@email.com.br", "ricardo123", "https://i.imgur.com/Sk5SjWE.jpg"));
 
-		usuarioService.cadastrarUsuario(new Usuario(0L, "Ricardo Marques", "ricardo_marques@email.com.br", "ricardo123",
-				"https://i.imgur.com/Sk5SjWE.jpg"));
+		/**
+		 * Cria um Objeto da Classe ResponseEntity (corpoResposta), que receberá a Resposta da Requisição que será 
+		 * enviada pelo Objeto da Classe TestRestTemplate.
+		 * 
+		 * Na requisição HTTP será enviada a URL do recurso (/usuarios/all), o verbo (GET), a entidade
+		 * HTTP será nula (Requisição GET não envia nada no Corpo da Requisição) e a Classe de retorno da Resposta 
+		 * (String), porquê a lista de Usuários será do tipo String.
+		 * 
+		 * Observe que o Método All não está liberado de autenticação (Login do usuário), por isso utilizamos o
+		 * Método withBasicAuth para autenticar o usuário em memória, criado na BasicSecurityConfig.
+		 * 
+		 * Usuário: root
+		 * Senha: root
+		 */
+		ResponseEntity<String> resposta = testRestTemplate
+			.withBasicAuth("root", "root")
+			.exchange("/usuarios/all", HttpMethod.GET, null, String.class);
 
-		// Realizando método get para cadastrar usuário
-		ResponseEntity<String> resposta = testRestTemplate.withBasicAuth("root", "root").exchange("/usuarios/all",
-				HttpMethod.GET, null, String.class);
-
-		// Retornando status ok caso tenha dado certo
+		/**
+		 *  Verifica se a requisição retornou o Status Code OK (200) 
+		 * Se for verdadeira, o teste passa, se não, o teste falha.
+		 */
 		assertEquals(HttpStatus.OK, resposta.getStatusCode());
 
 	}
 
-	// Teste 05
+	/** RESPOSTA DO DESAFIO! */
+
 	@Test
 	@Order(5)
 	@DisplayName("Listar Um Usuário Específico")
 	public void deveListarApenasUmUsuario() {
-
-		// Cadastrando um usuário
-		Optional<Usuario> usuarioBusca = usuarioService.cadastrarUsuario(new Usuario(0L, "Laura Santolia",
-				"laura_santolia@email.com.br", "laura12345", "https://i.imgur.com/EcJG8kB.jpg"));
-
-		// Buscando pelo usuário cadastrado
-		ResponseEntity<String> resposta = testRestTemplate.withBasicAuth("root", "root")
+		
+		/**
+		 * Persiste um objeto da Classe Usuario no Banco de dados através do Objeto da Classe UsuarioService e
+		 * guarda o objeto persistido no Banco de Dadoas no Objeto usuarioCadastrado, que será reutilizado abaixo. 
+		 * 
+		 * O Objeto usuarioCadastrado será do tipo Optional porquê caso o usuário não seja persistido no Banco 
+		 * de dados, o Optional evitará o erro NullPointerException (Objeto Nulo).
+		 */
+		Optional<Usuario> usuarioBusca = usuarioService.cadastrarUsuario(new Usuario(0L, 
+				"Laura Santolia", "laura_santolia@email.com.br", "laura12345", "https://i.imgur.com/EcJG8kB.jpg"));
+			
+		/**
+		 * Cria um Objeto da Classe ResponseEntity (corpoResposta), que receberá a Resposta da Requisição que será 
+		 * enviada pelo Objeto da Classe TestRestTemplate.
+		 * 
+		 * Na requisição HTTP será enviada a URL do recurso ("/usuarios/" + usuarioBusca.get().getId()), o verbo (GET), a entidade
+		 * HTTP será nula (Requisição GET não envia nada no Corpo da Requisição) e a Classe de retorno da Resposta 
+		 * (String), porquê a lista de Usuários será do tipo String.
+		 * 
+		 * Para obtero Id de forma automática, foi utilizado o método getId() do Objeto usuarioBusca.
+		 * 
+		 * Observe que o Método All não está liberado de autenticação (Login do usuário), por isso utilizamos o
+		 * Método withBasicAuth para autenticar o usuário em memória, criado na BasicSecurityConfig.
+		 * 
+		 * Usuário: root
+		 * Senha: root
+		 */
+		ResponseEntity<String> resposta = testRestTemplate
+				.withBasicAuth("root", "root")
 				.exchange("/usuarios/" + usuarioBusca.get().getId(), HttpMethod.GET, null, String.class);
-
-		// Verificando se encontrou o usuário e retornando o status
+		
+		/**
+		 *  Verifica se a requisição retornou o Status Code OK (200) 
+		 * Se for verdadeira, o teste passa, se não, o teste falha.
+		 */
 		assertEquals(HttpStatus.OK, resposta.getStatusCode());
-
+		
 	}
 
-	// Teste 06
 	@Test
 	@Order(6)
 	@DisplayName("Login do Usuário")
 	public void deveAutenticarUsuario() {
 
-		// Cadastrando usuário
-		usuarioService.cadastrarUsuario(new Usuario(0L, "Marisa Souza", "marisa_souza@email.com.br", "13465278",
-				"https://i.imgur.com/T12NIp9.jpg"));
+		/**
+		 * Persiste um objeto da Classe Usuario no Banco de dados através do Método cadastrarUsuario
+		 * da Classe UsuarioService
+		 */
+		usuarioService.cadastrarUsuario(new Usuario(0L, 
+			"Marisa Souza", "marisa_souza@email.com.br", "13465278", "https://i.imgur.com/T12NIp9.jpg"));
 
-		// passando os dados que desejamos atualizar para o corpo da requisição
-		HttpEntity<UsuarioLogin> corpoRequisicao = new HttpEntity<UsuarioLogin>(
-				new UsuarioLogin(0L, "", "marisa_souza@email.com.br", "13465278", "", ""));
+		/**
+		 * Cria um Objeto da Classe UsuarioLogin dentro de um Objeto da Classe HttpEntity (Entidade HTTP).
+		 * O Objeto desta Classe será preenchido apenas como o usuário e senha do usuário criado acima.
+		 */
+		HttpEntity<UsuarioLogin> corpoRequisicao = new HttpEntity<UsuarioLogin>(new UsuarioLogin(0L, 
+			"", "marisa_souza@email.com.br", "13465278", "", ""));
 
-		// Usando o corpo da requisição para realizar o login do usuário
-		ResponseEntity<UsuarioLogin> corpoResposta = testRestTemplate.exchange("/usuarios/logar", HttpMethod.POST,
-				corpoRequisicao, UsuarioLogin.class);
+		/**
+		 * Cria um Objeto da Classe ResponseEntity (corpoResposta), que receberá a Resposta da Requisição que será 
+		 * enviada pelo Objeto da Classe TestRestTemplate.
+		 * 
+		 * Na requisição HTTP será enviada a URL do recurso (/usuarios/logar), o verbo (POST), a entidade
+		 * HTTP criada acima (corpoRequisicao) e a Classe de retornos da Resposta (UsuarioLogin).
+		 */
+		ResponseEntity<UsuarioLogin> corpoResposta = testRestTemplate
+			.exchange("/usuarios/logar", HttpMethod.POST, corpoRequisicao, UsuarioLogin.class);
 
-		// Verificando se o status code ok está correto
+		/**
+		 *  Verifica se a requisição retornou o Status Code OK (200) 
+		 * Se for verdadeira, o teste passa, se não, o teste falha.
+		 */
 		assertEquals(HttpStatus.OK, corpoResposta.getStatusCode());
 
 	}
